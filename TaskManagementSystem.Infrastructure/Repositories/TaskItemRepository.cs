@@ -1,12 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TaskManagementSystem.Core.Dbcontext;
 using TaskManagementSystem.Core.Intefaces;
 using TaskManagementSystem.Core.Models;
 using TaskManagementSystem.Core.ViewModel;
-using TaskManagementSystem.Infrastructure.Services;
-using TaskManagementSystem.Infrastructure.ViewModel;
 
 namespace TaskManagementSystem.Infrastructure.Repositories
 {
