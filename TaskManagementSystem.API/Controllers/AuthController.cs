@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using TaskManagementSystem.Infrastructure.Services.Interfaces;
 using TaskManagementSystem.Infrastructure.ViewModel;
 
@@ -12,20 +13,24 @@ namespace TaskManagementSystem.Controllers
 
         public IUserService _UserService;
         public IJwtService _jwtService;
-        
-        public AuthController(ILogger<AuthController> logger, IUserService userService,IJwtService jwtService)
+        public IMapper _mapper;
+
+
+        public AuthController(ILogger<AuthController> logger, IUserService userService,IJwtService jwtService, IMapper mapper)
         {
             _jwtService = jwtService;
             _logger = logger;
             _UserService = userService;
+            _mapper = mapper;
+
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterUserViewModel userVM)
+        public async Task<IActionResult> Register(RegisterUserViewModel registerVM)
         {
             try
             {
-                bool checkUserExist = await _UserService.CheckUserNameExists(userVM.Username);
+                bool checkUserExist = await _UserService.CheckUserNameExists(registerVM.Username);
                 if (checkUserExist == true)
                     return BadRequest("Username already exists");
 
@@ -40,21 +45,24 @@ namespace TaskManagementSystem.Controllers
                         }
                     }
                 }
-
-                var passwordHash = BCrypt.Net.BCrypt.HashPassword(userVM.Password);
-                var userViewModel = new UserViewModel();
-                if (userVM != null)
+                
+                if (registerVM != null)
                 {
-                    //Add details to VM
-                    userViewModel.Id = new Guid();
-                    userViewModel.Username = userVM.Username;
-                    userViewModel.Email = userVM.Email;
-                    userViewModel.PasswordHash = passwordHash;
+                    var passwordHash = BCrypt.Net.BCrypt.HashPassword(registerVM.Password);
+                    
+                    // Map RegisterViewModel to UserViewModel
+                    var userVM = _mapper.Map<UserViewModel>(registerVM);
 
+                    // Enrich unmapped fields
+                    userVM.Id = Guid.NewGuid();
+                    userVM.PasswordHash = passwordHash;
+                    
+                    // Map to ViewModel
+                    var viewModel = _mapper.Map<UserViewModel>(userVM);
+                    
                     //Save user details to register
-                    userViewModel = _UserService.AddUserDetails (userViewModel);
+                    viewModel = _UserService.AddUserDetails (userVM);
                 }
-
                 return Ok("User registered successfully");
             }
             catch (Exception ex)

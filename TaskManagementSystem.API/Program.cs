@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using TaskManagementSystem.API.Middlewares;
 using TaskManagementSystem.Core.Dbcontext;
+using TaskManagementSystem.Infrastructure.Mappings;
 using TaskManagementSystem.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,7 +51,7 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TaskManagementSysem"));
 
 builder.Services.AddRepository();
-
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 builder.Services.AddAuthentication(options =>
 {

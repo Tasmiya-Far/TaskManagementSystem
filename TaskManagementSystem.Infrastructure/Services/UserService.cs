@@ -11,11 +11,13 @@ namespace TaskManagementSystem.Infrastructure.Services
     {
         public IUnitOfWork UnitOfWork { get; }
         private readonly ILogger<UserService> _logger;
+        private readonly IMapper _mapper;
 
-        public UserService(IUnitOfWork unitOfWork, ILogger<UserService> logger)
+        public UserService(IUnitOfWork unitOfWork, ILogger<UserService> logger, IMapper mapper)
         {
             UnitOfWork = unitOfWork;
             _logger = logger;
+            _mapper = mapper;
         }
 
         public UserViewModel AddUserDetails(UserViewModel user)
@@ -23,10 +25,7 @@ namespace TaskManagementSystem.Infrastructure.Services
             try
             {
                 //Add new user
-                var config = new MapperConfiguration(cfg =>
-                                   cfg.CreateMap<UserViewModel, User>());
-                var mapper = new Mapper(config);
-                var userdtl = mapper.Map<UserViewModel, User>(user);
+                var userdtl = _mapper.Map<UserViewModel, User>(user);
                 UnitOfWork.User.Add(userdtl);
                 UnitOfWork.Complete();
 
@@ -78,7 +77,7 @@ namespace TaskManagementSystem.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("UserService/GetUserDetailsByUserName failed with an exception : " + ex.Message);
+                _logger.LogError("UserService/CheckUserNameExists failed with an exception : " + ex.Message);
                 return false;
             }
         }

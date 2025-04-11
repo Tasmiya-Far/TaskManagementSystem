@@ -1,4 +1,5 @@
-﻿using TaskManagementSystem.Infrastructure.ViewModel;
+﻿using TaskManagementSystem.Core.ViewModel;
+using TaskManagementSystem.Infrastructure.ViewModel;
 
 namespace TaskManagementSystem.Infrastructure.Services.Interfaces
 {
@@ -8,7 +9,7 @@ namespace TaskManagementSystem.Infrastructure.Services.Interfaces
         TaskItemViewModel AddTaskDetails(TaskItemViewModel taskItem);
         Task<TaskItemViewModel> UpdateTaskDetails(TaskItemViewModel taskItem);
         Task<bool> DeleteTaskDetails(string id);
-        Task<List<TaskItemViewModel>> GetAllTaskItemDetailsByUserID(string id);
+        Task<PagedResult<DisplayTaskItemViewModel>> GetAllTaskItemDetailsByUserID(string userId, PageParams pageParams);
 
     }
 }

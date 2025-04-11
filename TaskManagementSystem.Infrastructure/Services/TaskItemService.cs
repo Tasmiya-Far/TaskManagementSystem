@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using TaskManagementSystem.Core;
 using TaskManagementSystem.Core.Models;
+using TaskManagementSystem.Core.ViewModel;
 using TaskManagementSystem.Infrastructure.Services.Interfaces;
 using TaskManagementSystem.Infrastructure.ViewModel;
 
@@ -11,11 +13,13 @@ namespace TaskManagementSystem.Infrastructure.Services
     {
         public IUnitOfWork UnitOfWork { get; }
         private readonly ILogger<TaskItemService> _logger;
+        public IMapper _mapper;
 
-        public TaskItemService(IUnitOfWork unitOfWork, ILogger<TaskItemService> logger)
+        public TaskItemService(IUnitOfWork unitOfWork, ILogger<TaskItemService> logger, IMapper mapper)
         {
             UnitOfWork = unitOfWork;
             _logger = logger;
+            _mapper = mapper;
         }
 
         public TaskItemViewModel AddTaskDetails(TaskItemViewModel taskItem)
@@ -23,13 +27,7 @@ namespace TaskManagementSystem.Infrastructure.Services
             try
             {
                 //Add new task item
-                var config = new MapperConfiguration(cfg =>
-                                   cfg.CreateMap<TaskItemViewModel, TaskItem>()
-                                   .ForMember(dest => dest.IsCompleted, act => act.MapFrom(src => src.IsCompleted ? true : false))
-                                   .ForMember(dest => dest.DueDate, act => act.MapFrom(src => src.DueDate))
-                                   );
-                var mapper = new Mapper(config);
-                var taskitemdtl = mapper.Map<TaskItemViewModel, TaskItem>(taskItem);
+                var taskitemdtl = _mapper.Map<TaskItemViewModel, TaskItem>(taskItem);
                 UnitOfWork.TaskItem.Add(taskitemdtl);
                 UnitOfWork.Complete();
 
@@ -45,71 +43,27 @@ namespace TaskManagementSystem.Infrastructure.Services
 
         public  async Task<TaskItemViewModel> GetTaskDetails(string id)
         {
-            var TaskItemVM = new TaskItemViewModel();
             try
             {
                 var TaskItem = await UnitOfWork.TaskItem.GetTaskItemByID(id);
-
-                if (TaskItem != null)
-                {
-                    TaskItemVM.Id = TaskItem.Id;
-                    TaskItemVM.Title = TaskItem.Title;
-                    TaskItemVM.Description = TaskItem.Description;
-                    TaskItemVM.DueDate = TaskItem.DueDate;
-                    TaskItemVM.IsCompleted = TaskItem.IsCompleted;
-                    TaskItemVM.UserId = TaskItem.UserId;
-                }
+                var TaskItemVM = _mapper.Map<TaskItem, TaskItemViewModel>(TaskItem);
                 return TaskItemVM;
             }
             catch (Exception ex)
             {
                 _logger.LogError("TaskItemService/GetTaskDetails failed with an exception : " + ex.Message);
-                return TaskItemVM;
+                return new TaskItemViewModel();
             }
         }
-
-        public async Task<List<TaskItemViewModel>> GetAllTaskItemDetailsByUserID(string id)
-        {
-            var TaskItemVM = new List<TaskItemViewModel>();
-            try
-            {
-                var TaskItems = await UnitOfWork.TaskItem.GetAllTaskItemListByUserID(id);
-                    if (TaskItems != null)
-                {
-                    foreach (var item in TaskItems)
-                    {
-                        TaskItemViewModel taskitemVM = new();
-                        taskitemVM.Id = item.Id;
-                        taskitemVM.Title = item.Title;
-                        taskitemVM.Description = item.Description;
-                        taskitemVM.IsCompleted = item.IsCompleted;
-                        taskitemVM.DueDate = item.DueDate;
-                        
-                        TaskItemVM.Add(taskitemVM);
-                    }
-                }
-                return TaskItemVM;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("TaskItemService/GetAllTaskItemDetailsByUserID failed with an exception : " + ex.Message);
-                return TaskItemVM;
-            }
-        }
-
+      
         public async Task< TaskItemViewModel> UpdateTaskDetails(TaskItemViewModel taskItemVM)
         {
             try
             {
                 var TaskItemVM = await UnitOfWork.TaskItem.GetTaskItemByID( taskItemVM.Id.ToString());
-                var TaskItem = new TaskItem();
-
                 if (TaskItemVM!=null)
                 {
-                    TaskItemVM.Title = taskItemVM.Title;
-                    TaskItemVM.Description = taskItemVM.Description;
-                    TaskItemVM.DueDate = taskItemVM.DueDate;
-                    TaskItemVM.IsCompleted = taskItemVM.IsCompleted;
+                    TaskItemVM = _mapper.Map<TaskItemViewModel, TaskItem>(taskItemVM);
                 }
                 UnitOfWork.TaskItem.Update(TaskItemVM);
                 UnitOfWork.Complete();
@@ -144,6 +98,18 @@ namespace TaskManagementSystem.Infrastructure.Services
                 _logger.LogError("TaskItemService/DeleteTaskDetails failed with an exception: " + ex.Message);
                 return false;
             }
+        }
+        public async Task<PagedResult<DisplayTaskItemViewModel>> GetAllTaskItemDetailsByUserID(string userId, PageParams pageParams)
+        {
+            var pageresult= await UnitOfWork.TaskItem.GetAllTaskItemListByUserID(userId, pageParams);
+            var viewModelResult = new PagedResult<DisplayTaskItemViewModel>
+            {
+                Tasks = _mapper.Map<List<DisplayTaskItemViewModel>>(pageresult.Tasks),                
+                TotalCount = pageresult.TotalCount,
+                PageNumber = pageresult.PageNumber,
+                PageSize = pageresult.PageSize
+            };
+            return viewModelResult;                
         }
     }
 }

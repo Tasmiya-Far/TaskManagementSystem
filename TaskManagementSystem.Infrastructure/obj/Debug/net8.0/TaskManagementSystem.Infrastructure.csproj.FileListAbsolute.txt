@@ -29,3 +29,4 @@ C:\Users\HP\source\TMS\TaskManagementSystem.Infrastructure\obj\Debug\net8.0\Task
 C:\Users\HP\source\TMS\TaskManagementSystem.Infrastructure\obj\Debug\net8.0\refint\TaskManagementSystem.Infrastructure.dll
 C:\Users\HP\source\TMS\TaskManagementSystem.Infrastructure\obj\Debug\net8.0\TaskManagementSystem.Infrastructure.pdb
 C:\Users\HP\source\TMS\TaskManagementSystem.Infrastructure\obj\Debug\net8.0\ref\TaskManagementSystem.Infrastructure.dll
+C:\Users\HP\source\TMS\TaskManagementSystem.Infrastructure\obj\Debug\net8.0\TaskManagementSystem.Infrastructure.sourcelink.json

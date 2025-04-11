@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TaskManagementSystem.Infrastructure.ViewModel;
-using System.Web;
 using Microsoft.AspNetCore.Authorization;
 using TaskManagementSystem.Infrastructure.Services.Interfaces;
+using TaskManagementSystem.Core.ViewModel;
 using AutoMapper;
+using System.Threading.Tasks;
 
 namespace TaskManagementSystem.Controllers
 {
@@ -15,75 +16,54 @@ namespace TaskManagementSystem.Controllers
     {
 
         private readonly ILogger<TasksController> _logger;
+        public IMapper _mapper;
 
         public ITaskItemService _taskItemService;
 
-        public TasksController( ILogger<TasksController> logger, ITaskItemService taskItemService)
+        public TasksController( ILogger<TasksController> logger, ITaskItemService taskItemService, IMapper mapper)
         {
             _logger = logger;
             _taskItemService = taskItemService;
+            _mapper = mapper;
         }
 
         private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-
+        
         [HttpGet]
-        public async Task<IActionResult> GetTasks()
+        public async Task<IActionResult> GetTasksByUserId([FromQuery] PageParams queryParams)
         {
             try
             {
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
-                var tasks = await _taskItemService.GetAllTaskItemDetailsByUserID(userId);
 
-                // Map to DisplayTaskItemViewModel (without Id)
-                var taskDtos = tasks.Select(t => new DisplayTaskItemViewModel
-                {
-                    Id = t.Id.ToString(),
-                    Title = t.Title,
-                    Description = t.Description,
-                    DueDate = t.DueDate,
-                    IsCompleted = t.IsCompleted
-                }).ToList();
+                var tasks = await _taskItemService.GetAllTaskItemDetailsByUserID(userId, queryParams);
 
-                if (taskDtos.Any())
-                {
-                    return Ok(taskDtos);
-                }
-                else
-                {
-                    return Ok("No Tasks to display");
-                }
+                return Ok(tasks);
             }
             catch (Exception ex)
             {
-                _logger.LogError("TasksController/GetTasks failed with an exception: " + ex.Message);
+                _logger.LogError("TasksController/GetTasksByUserId failed with an exception: " + ex.Message);
                 return BadRequest();
             }            
         }
 
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<TaskItemViewModel>> GetTask(string id)
+        public async Task<ActionResult<DisplayTaskItemViewModel>> GetTask(string id)
         {
             try
             {
                 var userId = GetUserId();
                 var task = await _taskItemService.GetTaskDetails(id);
                 if (task == null) return NotFound();
-                
-                return Ok(new DisplayTaskItemViewModel
-                {
-                    Id = task.Id.ToString(),
-                    Title = task.Title,
-                    Description = task.Description,
-                    DueDate = task.DueDate,
-                    IsCompleted = task.IsCompleted
-                });
+                var viewModel = _mapper.Map<DisplayTaskItemViewModel>(task);
+                return Ok(viewModel);
             }
             catch (Exception ex)
             {
-                _logger.LogError("TasksController/GetTasks failed with an exception: " + ex.Message);
+                _logger.LogError("TasksController/GetTask failed with an exception: " + ex.Message);
                 return BadRequest();
             }
         }
@@ -91,22 +71,20 @@ namespace TaskManagementSystem.Controllers
         [HttpPost("CreateTask")]
         public ActionResult<TaskItemViewModel> CreateTask(CreateTaskItemViewModel CreateItemVM)
         {
-            var tasktemViewModel = new TaskItemViewModel();
             try
             {
 
                 if (CreateItemVM != null)
                 {
-                    //Add details to VM
-                    tasktemViewModel.Id = Guid.NewGuid();
-                    tasktemViewModel.Title = CreateItemVM.Title;
-                    tasktemViewModel.Description = CreateItemVM.Description;
-                    tasktemViewModel.DueDate = CreateItemVM.DueDate;
-                    tasktemViewModel.IsCompleted = CreateItemVM.IsCompleted;
-                    tasktemViewModel.UserId = GetUserId();
-                    
+                    // Map CreateTaskItemViewModel to TaskItemViewModel
+                    var taskItemViewModel = _mapper.Map<TaskItemViewModel>(CreateItemVM);
+
+                    // Enrich unmapped fields
+                    taskItemViewModel.Id = Guid.NewGuid();
+                    taskItemViewModel.UserId = GetUserId();
+                                        
                     //Add task details 
-                    var TaskItem = _taskItemService.AddTaskDetails(tasktemViewModel);
+                    var TaskItem = _taskItemService.AddTaskDetails(taskItemViewModel);
                 }
                 return Ok("Task Created Successfully");
             }
@@ -118,7 +96,7 @@ namespace TaskManagementSystem.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTask(string id, CreateTaskItemViewModel UpdateItemVM)
+        public async Task<IActionResult> UpdateTask(string id, CreateTaskItemViewModel UpdateTaskVM)
         {
             try
             {
@@ -129,14 +107,16 @@ namespace TaskManagementSystem.Controllers
 
                 if (taskVM == null) return NotFound();
 
-                taskVM.Title = UpdateItemVM.Title;
-                taskVM.Description = UpdateItemVM.Description;
-                taskVM.DueDate = UpdateItemVM.DueDate;
-                taskVM.IsCompleted = UpdateItemVM.IsCompleted;
 
+                // Map CreateTaskItemViewModel -> TaskItemViewModel
+                var updatedVM = _mapper.Map<TaskItemViewModel>(UpdateTaskVM);
+                updatedVM.Title = UpdateTaskVM.Title;
+                updatedVM.Description = UpdateTaskVM.Description;
+                updatedVM.IsCompleted = UpdateTaskVM.IsCompleted;
+                updatedVM.DueDate = UpdateTaskVM.DueDate;
 
                 //Update task details 
-                var TaskItemDtl = _taskItemService.UpdateTaskDetails(taskVM);
+                var TaskItemDtl = _taskItemService.UpdateTaskDetails(updatedVM);
 
                 return Ok("Task Updated Successfully");
             }
